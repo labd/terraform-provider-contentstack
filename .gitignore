@@ -1,0 +1,6 @@
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+
+main.tf
+terraform-provider-contentstack_*
