@@ -1,4 +1,4 @@
-package contentstack
+package provider
 
 import (
 	"context"
