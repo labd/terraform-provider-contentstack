@@ -4,6 +4,9 @@ The Terraform commercetools provider allows you to configure your contenstack st
 
 ## Usage
 
+The full documentation is available via https://registry.terraform.io/providers/labd/contentstack/latest/docs
+
+
 Add the following to your terraform project:
 
 ```hcl
