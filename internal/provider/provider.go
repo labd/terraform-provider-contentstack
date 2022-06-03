@@ -2,78 +2,114 @@ package provider
 
 import (
 	"context"
+	"net/http"
+	"os"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/labd/contentstack-go-sdk/management"
 )
 
-func New(version string) func() *schema.Provider {
-	return func() *schema.Provider {
-		p := &schema.Provider{
-			Schema: map[string]*schema.Schema{
-				"base_url": {
-					Type:     schema.TypeString,
-					Optional: true,
-				},
-				"api_key": {
-					Type:     schema.TypeString,
-					Optional: true,
-				},
-				"management_token": {
-					Type:      schema.TypeString,
-					Optional:  true,
-					Sensitive: true,
-				},
-				"auth_token": {
-					Type:      schema.TypeString,
-					Optional:  true,
-					Sensitive: true,
-				},
-			},
-			ResourcesMap: map[string]*schema.Resource{
-				"contentstack_webhook": resourceWebhook(),
-			},
-			DataSourcesMap: map[string]*schema.Resource{},
-		}
+var stderr = os.Stderr
 
-		p.ConfigureContextFunc = configure(version, p)
-
-		return p
-	}
+func New() tfsdk.Provider {
+	return &provider{}
 }
 
-func configure(version string, p *schema.Provider) func(context.Context, *schema.ResourceData) (interface{}, diag.Diagnostics) {
+type provider struct {
+	configured bool
+	stack      *management.StackInstance
+	client     *management.Client
+}
 
-	return func(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
-		baseURL := d.Get("base_url").(string)
-		authToken := d.Get("auth_token").(string)
-		apiKey := d.Get("api_key").(string)
-		managementToken := d.Get("management_token").(string)
+// GetSchema
+func (p *provider) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
+	return tfsdk.Schema{
+		Attributes: map[string]tfsdk.Attribute{
+			"base_url": {
+				Type:     types.StringType,
+				Optional: true,
+			},
+			"api_key": {
+				Type:     types.StringType,
+				Optional: true,
+			},
+			"management_token": {
+				Type:      types.StringType,
+				Optional:  true,
+				Sensitive: true,
+			},
+			"auth_token": {
+				Type:      types.StringType,
+				Optional:  true,
+				Sensitive: true,
+			},
+		},
+	}, nil
+}
 
-		// Warning or errors can be collected in a slice type
-		var diags diag.Diagnostics
+// Provider schema struct
+type providerData struct {
+	BaseURL         types.String `tfsdk:"base_url"`
+	AuthToken       types.String `tfsdk:"auth_token"`
+	ApiKey          types.String `tfsdk:"api_key"`
+	ManagementToken types.String `tfsdk:"management_token"`
+}
 
-		cfg := management.ClientConfig{
-			BaseURL:   baseURL,
-			AuthToken: authToken,
-		}
+func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderRequest, resp *tfsdk.ConfigureProviderResponse) {
 
-		c, err := management.NewClient(cfg)
-		if err != nil {
-			return nil, diag.FromErr(err)
-		}
-
-		stackAuth := management.StackAuth{
-			ApiKey:          apiKey,
-			ManagementToken: managementToken,
-		}
-
-		instance, err := c.Stack(&stackAuth)
-		if err != nil {
-			return nil, diag.FromErr(err)
-		}
-
-		return instance, diags
+	// Retrieve provider data from configuration
+	var config providerData
+	diags := req.Config.Get(ctx, &config)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
+
+	cfg := management.ClientConfig{
+		BaseURL:   config.BaseURL.Value,
+		AuthToken: config.AuthToken.Value,
+		HTTPClient: &http.Client{
+			Transport: management.DebugTransport,
+		},
+	}
+
+	c, err := management.NewClient(cfg)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to create client",
+			"Unable to create contentstack client:\n\n"+err.Error(),
+		)
+		return
+	}
+
+	stackAuth := management.StackAuth{
+		ApiKey:          config.ApiKey.Value,
+		ManagementToken: config.ManagementToken.Value,
+	}
+
+	instance, err := c.Stack(&stackAuth)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to create stack client",
+			"Unable to create contentstack stack client:\n\n"+err.Error(),
+		)
+		return
+	}
+
+	p.client = c
+	p.stack = instance
+}
+
+// GetResources - Defines provider resources
+func (p *provider) GetResources(_ context.Context) (map[string]tfsdk.ResourceType, diag.Diagnostics) {
+	return map[string]tfsdk.ResourceType{
+		"contentstack_webhook": resourceWebhookType{},
+	}, nil
+}
+
+// GetDataSources - Defines provider data sources
+func (p *provider) GetDataSources(_ context.Context) (map[string]tfsdk.DataSourceType, diag.Diagnostics) {
+	return map[string]tfsdk.DataSourceType{}, nil
 }

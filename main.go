@@ -1,9 +1,10 @@
 package main
 
 import (
+	"context"
 	"flag"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/plugin"
+	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 
 	"github.com/labd/terraform-provider-contentstack/internal/provider"
 )
@@ -23,9 +24,8 @@ func main() {
 	flag.BoolVar(&debugMode, "debug", false, "set to true to run the provider with support for debuggers like delve")
 	flag.Parse()
 
-	plugin.Serve(&plugin.ServeOpts{
-		Debug:        debugMode,
-		ProviderAddr: "registry.terraform.io/labd/contentstack",
-		ProviderFunc: provider.New(version),
+	providerserver.Serve(context.Background(), provider.New, providerserver.ServeOpts{
+		Address: "registry.terraform.io/labd/contentstack",
+		Debug:   debugMode,
 	})
 }
