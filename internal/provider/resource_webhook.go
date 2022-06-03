@@ -39,6 +39,10 @@ type WebhookCustomHeaderData struct {
 // Webhook Resource schema
 func (r resourceWebhookType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
+		Description: `
+		A webhook is a user-defined HTTP callback. It is a mechanism that sends
+		real-time information to any third-party app or service.
+		`,
 		Attributes: map[string]tfsdk.Attribute{
 			"uid": {
 				Type:     types.StringType,
@@ -61,16 +65,19 @@ func (r resourceWebhookType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Di
 				Optional: true,
 			},
 			"retry_policy": {
-				Type:     types.StringType,
-				Required: true,
+				Type:        types.StringType,
+				Required:    true,
+				Description: "should be set to `manual`",
 			},
 			"disabled": {
-				Type:     types.BoolType,
-				Optional: true,
+				Type:        types.BoolType,
+				Optional:    true,
+				Description: "allows you to enable or disable the webhook.",
 			},
 			"concise_payload": {
-				Type:     types.BoolType,
-				Optional: true,
+				Type:        types.BoolType,
+				Optional:    true,
+				Description: "allows you to send a concise JSON payload to the target URL when a specific event occurs. To send a comprehensive JSON payload, you can set its value to false.",
 			},
 		},
 		Blocks: map[string]tfsdk.Block{
