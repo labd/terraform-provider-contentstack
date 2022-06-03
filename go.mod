@@ -6,7 +6,7 @@ require (
 	github.com/hashicorp/terraform-plugin-docs v0.9.0
 	github.com/hashicorp/terraform-plugin-framework v0.8.1-0.20220531184835-f0051665855e
 	github.com/hashicorp/terraform-plugin-go v0.9.1
-	github.com/labd/contentstack-go-sdk v0.0.0-20220603122001-6c586b525fb3
+	github.com/labd/contentstack-go-sdk v0.0.0-20220603150426-b675b0bd2a10
 )
 
 // replace github.com/labd/contentstack-go-sdk => ../contentstack-go-sdk

@@ -2,8 +2,7 @@
 terraform {
   required_providers {
     contentstack = {
-      source  = "labd/contentstack"
-      version = "0.1.0"
+      source = "labd/contentstack"
     }
   }
 }

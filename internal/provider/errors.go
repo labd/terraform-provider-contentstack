@@ -15,9 +15,9 @@ func processRemoteError(e error) diag.Diagnostics {
 
 	case *management.ErrorMessage:
 		errors := []string{}
-		for _, fieldErrors := range err.Errors {
+		for fieldName, fieldErrors := range err.Errors {
 			for _, msg := range fieldErrors {
-				errors = append(errors, fmt.Sprintf(" - %s", msg))
+				errors = append(errors, fmt.Sprintf(" %s - %s", fieldName, msg))
 			}
 		}
 		diags.AddError(err.ErrorMessage, strings.Join(errors, "\n"))

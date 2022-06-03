@@ -1,6 +1,8 @@
 .terraform/
 .terraform.lock.hcl
 *.tfstate
+*.backup
 
 /main.tf
-terraform-provider-contentstack_*
+/terraform-provider-contentstack_*
+/terraform-provider-contentstack
