@@ -89,7 +89,7 @@ func (r resourceGlobalField) Create(ctx context.Context, req tfsdk.CreateResourc
 
 	// Write to state.
 	state := NewGlobalFieldData(resource)
-	GlobalFieldMergeSchema(state, &plan)
+	MergeGlobalField(state, &plan)
 	diags = resp.State.Set(ctx, state)
 	resp.Diagnostics.Append(diags...)
 }
@@ -176,7 +176,7 @@ func (r resourceGlobalField) Update(ctx context.Context, req tfsdk.UpdateResourc
 
 	// Set state
 	result := NewGlobalFieldData(resource)
-	GlobalFieldMergeSchema(result, &plan)
+	MergeGlobalField(result, &plan)
 	diags = resp.State.Set(ctx, result)
 	resp.Diagnostics.Append(diags...)
 }
@@ -215,6 +215,6 @@ func NewGlobalFieldInput(field *GlobalFieldData) *management.GlobalFieldInput {
 	return input
 }
 
-func GlobalFieldMergeSchema(out *GlobalFieldData, in *GlobalFieldData) {
+func MergeGlobalField(out *GlobalFieldData, in *GlobalFieldData) {
 	out.Schema = in.Schema
 }

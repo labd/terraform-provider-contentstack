@@ -1,5 +1,6 @@
 ## 0.2.0 (unreleased)
 
+ - Add the `contentstack_content_type` resource.
  - Add the `contentstack_locale` resource.
 
 
