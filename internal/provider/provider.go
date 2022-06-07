@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"net/http"
-	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -11,7 +10,6 @@ import (
 	"github.com/labd/contentstack-go-sdk/management"
 )
 
-var stderr = os.Stderr
 
 func New() tfsdk.Provider {
 	return &provider{}
