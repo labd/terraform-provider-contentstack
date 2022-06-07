@@ -13,6 +13,9 @@ build-local:
 	mkdir -p ~/.terraform.d/plugins/registry.terraform.io/labd/contentstack/${LOCAL_TEST_VERSION}/${OS_ARCH}
 	cp terraform-provider-contentstack_${LOCAL_TEST_VERSION} ~/.terraform.d/plugins/registry.terraform.io/labd/contentstack/${LOCAL_TEST_VERSION}/${OS_ARCH}/terraform-provider-contentstack_v${LOCAL_TEST_VERSION}
 
+lint:
+	staticcheck ./...
+
 format:
 	go fmt ./...
 
