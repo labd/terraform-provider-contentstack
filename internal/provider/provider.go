@@ -28,22 +28,26 @@ func (p *provider) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics)
 	return tfsdk.Schema{
 		Attributes: map[string]tfsdk.Attribute{
 			"base_url": {
-				Type:     types.StringType,
-				Optional: true,
+				Type:        types.StringType,
+				Optional:    true,
+				Description: "The BaseURL, e.g. https://eu-api.contentstack.com/. See https://www.contentstack.com/docs/developers/apis/content-management-api/#base-url",
 			},
 			"api_key": {
-				Type:     types.StringType,
-				Optional: true,
+				Type:        types.StringType,
+				Optional:    true,
+				Description: "The API key is a unique key assigned to each stack.",
 			},
 			"management_token": {
-				Type:      types.StringType,
-				Optional:  true,
-				Sensitive: true,
+				Type:        types.StringType,
+				Optional:    true,
+				Sensitive:   true,
+				Description: "Management Tokens are stack-level tokens, with no users attached to them.",
 			},
 			"auth_token": {
-				Type:      types.StringType,
-				Optional:  true,
-				Sensitive: true,
+				Type:        types.StringType,
+				Optional:    true,
+				Sensitive:   true,
+				Description: "The Authtoken is a read-write token used to make authorized CMA requests, and it is a user-specific token.",
 			},
 		},
 	}, nil
