@@ -34,7 +34,7 @@ func main() {
 	flag.BoolVar(&debugMode, "debug", false, "set to true to run the provider with support for debuggers like delve")
 	flag.Parse()
 
-	providerserver.Serve(context.Background(), provider.New, providerserver.ServeOpts{
+	providerserver.Serve(context.Background(), provider.New(version), providerserver.ServeOpts{
 		Address: "registry.terraform.io/labd/contentstack",
 		Debug:   debugMode,
 	})

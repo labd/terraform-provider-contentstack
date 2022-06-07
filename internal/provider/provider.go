@@ -10,15 +10,16 @@ import (
 	"github.com/labd/contentstack-go-sdk/management"
 )
 
-
-func New() tfsdk.Provider {
-	return &provider{}
+func New(version string) func() tfsdk.Provider {
+	return func() tfsdk.Provider {
+		return &provider{version: version}
+	}
 }
 
 type provider struct {
-	configured bool
-	stack      *management.StackInstance
-	client     *management.Client
+	stack   *management.StackInstance
+	client  *management.Client
+	version string
 }
 
 // GetSchema
