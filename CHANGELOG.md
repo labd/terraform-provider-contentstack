@@ -1,4 +1,4 @@
-## 0.2.0 (unreleased)
+## 0.2.0 (2022-06-07)
 
  - Add the `contentstack_content_type` resource.
  - Add the `contentstack_locale` resource.
