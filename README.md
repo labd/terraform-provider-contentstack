@@ -1,6 +1,7 @@
 # Contentstack Terraform Provider
 
-The Terraform commercetools provider allows you to configure your contenstack stack with infrastructure-as-code principles.
+The Terraform provider for [Contentstack](https://www.contentstack.com/) allows 
+you to configure your Contenstack stack with infrastructure-as-code principles.
 
 ## Usage
 
