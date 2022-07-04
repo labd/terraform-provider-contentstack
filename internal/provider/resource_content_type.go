@@ -36,7 +36,8 @@ func (r resourceContentTypeType) GetSchema(_ context.Context) (tfsdk.Schema, dia
 		Attributes: map[string]tfsdk.Attribute{
 			"uid": {
 				Type:     types.StringType,
-				Required: true,
+				Optional: true,
+				Computed: true,
 			},
 			"title": {
 				Type:     types.StringType,
