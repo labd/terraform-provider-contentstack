@@ -6,3 +6,6 @@
 /main.tf
 /terraform-provider-contentstack_*
 /terraform-provider-contentstack
+
+/.idea
+/.vscode
