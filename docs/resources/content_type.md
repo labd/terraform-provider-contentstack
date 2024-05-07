@@ -85,11 +85,11 @@ JSON
 ### Required
 
 - `title` (String)
-- `uid` (String)
 
 ### Optional
 
 - `description` (String)
 - `schema` (String) The schema as JSON. Use jsonencode(jsonecode(<schema>)) to work around wrong changes.
+- `uid` (String)
 
 
