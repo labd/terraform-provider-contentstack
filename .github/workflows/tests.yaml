@@ -27,17 +27,14 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        go: [ '1.18' ]
-
     steps:
       - uses: actions/checkout@v2
 
-      - name: Set up Go ${{ matrix.go }}
+      - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ matrix.go }}
+          go-version-file: 'go.mod'
+          cache: true
 
       - name: golangci-lint
         continue-on-error: true
