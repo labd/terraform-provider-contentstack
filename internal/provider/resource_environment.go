@@ -107,12 +107,12 @@ func (r resourceEnvironment) Read(ctx context.Context, req tfsdk.ReadResourceReq
 		return
 	}
 
-	environment, err := r.p.stack.EnvironmentFetch(ctx, state.UID.Value)
+	environment, err := r.p.stack.EnvironmentFetch(ctx, state.Name.Value)
 	if err != nil {
 		if IsNotFoundError(err) {
 			d := diag.NewErrorDiagnostic(
 				"Error retrieving environment",
-				fmt.Sprintf("The environment with UID %s was not found.", state.UID.Value))
+				fmt.Sprintf("The environment with Name %s was not found.", state.Name.Value))
 			resp.Diagnostics.Append(d)
 		} else {
 			diags := processRemoteError(err)
@@ -140,7 +140,7 @@ func (r resourceEnvironment) Delete(ctx context.Context, req tfsdk.DeleteResourc
 	}
 
 	// Delete environment by calling API
-	err := r.p.stack.EnvironmentDelete(ctx, state.UID.Value)
+	err := r.p.stack.EnvironmentDelete(ctx, state.Name.Value)
 	if err != nil {
 		diags = processRemoteError(err)
 		resp.Diagnostics.Append(diags...)
@@ -169,7 +169,7 @@ func (r resourceEnvironment) Update(ctx context.Context, req tfsdk.UpdateResourc
 	}
 
 	input := NewEnvironmentInput(&plan)
-	environment, err := r.p.stack.EnvironmentUpdate(ctx, state.UID.Value, *input)
+	environment, err := r.p.stack.EnvironmentUpdate(ctx, state.Name.Value, *input)
 	if err != nil {
 		diags = processRemoteError(err)
 		resp.Diagnostics.Append(diags...)
