@@ -15,7 +15,7 @@ type resourceEnvironmentType struct{}
 
 type EnvironmentData struct {
 	UID  types.String         `tfsdk:"uid"`
-	Name types.String         `tfsfk:"name"`
+	Name types.String         `tfsdk:"name"`
 	URLs []EnvironmentUrlData `tfsdk:"url"`
 }
 
