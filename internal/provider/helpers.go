@@ -1,6 +1,8 @@
 package provider
 
 import (
+	"fmt"
+	"github.com/labd/contentstack-go-sdk/management"
 	"reflect"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -34,4 +36,19 @@ func processResponse(resp any, input any) diag.Diagnostics {
 	}
 
 	return diags
+}
+
+func copyHttpBasicPasswords(wd []management.WebhookDestination, data WebhookDestinationSlice) ([]management.WebhookDestination, error) {
+	cd := make([]management.WebhookDestination, 0, len(wd))
+
+	for _, d := range wd {
+		planned := data.FindByTargetURLAndHttpBasicAuth(d.TargetURL, d.HttpBasicAuth)
+		if planned == nil {
+			return nil, fmt.Errorf("d %s not found in planned state", d.TargetURL)
+		}
+
+		d.HttpBasicPassword = planned.HttpBasicPassword.Value
+		cd = append(cd, d)
+	}
+	return cd, nil
 }
