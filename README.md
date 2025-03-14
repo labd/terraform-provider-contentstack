@@ -1,12 +1,11 @@
 # Contentstack Terraform Provider
 
-The Terraform provider for [Contentstack](https://www.contentstack.com/) allows 
-you to configure your Contenstack stack with infrastructure-as-code principles.
+The Terraform provider for [Contentstack](https://www.contentstack.com/) allows
+you to configure your Contentstack stack with infrastructure-as-code principles.
 
 ## Usage
 
 The full documentation is available via https://registry.terraform.io/providers/labd/contentstack/latest/docs
-
 
 Add the following to your terraform project:
 
