@@ -3,9 +3,6 @@
 #
 name: Tests
 on:
-  pull_request:
-    paths-ignore:
-      - 'README.md'
   push:
     paths-ignore:
       - 'README.md'
@@ -19,6 +16,7 @@ jobs:
         with:
           go-version-file: 'go.mod'
           cache: true
+      - uses: hashicorp/setup-terraform@v3
       - run: go generate ./...
       - name: git diff
         run: |
@@ -52,7 +50,7 @@ jobs:
 
   changie:
     runs-on: ubuntu-latest
-    needs: test
+    needs: [test, generate]
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     permissions:
       contents: write
