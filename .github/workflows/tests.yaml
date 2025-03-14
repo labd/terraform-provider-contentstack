@@ -46,7 +46,7 @@ jobs:
         run: go test -race -coverprofile=coverage.out -covermode=atomic -coverpkg=./... -v ./...
 
       - name: Upload to codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           verbose: true
 
@@ -64,7 +64,7 @@ jobs:
           fetch-depth: 0
 
       - name: Prepare release
-        uses: labd/changie-release-action@v0.3.2
+        uses: labd/changie-release-action@v0.6.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           release-workflow: 'release.yaml'
