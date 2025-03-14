@@ -14,14 +14,25 @@ import (
 type resourceWebhookType struct{}
 
 type WebhookData struct {
-	UID            types.String             `tfsdk:"uid"`
-	Name           types.String             `tfsdk:"name"`
-	Branches       []types.String           `tfsdk:"branches"`
-	Channels       []types.String           `tfsdk:"channels"`
-	RetryPolicy    types.String             `tfsdk:"retry_policy"`
-	ConcisePayload types.Bool               `tfsdk:"concise_payload"`
-	Disabled       types.Bool               `tfsdk:"disabled"`
-	Destinations   []WebhookDestinationData `tfsdk:"destination"`
+	UID            types.String            `tfsdk:"uid"`
+	Name           types.String            `tfsdk:"name"`
+	Branches       []types.String          `tfsdk:"branches"`
+	Channels       []types.String          `tfsdk:"channels"`
+	RetryPolicy    types.String            `tfsdk:"retry_policy"`
+	ConcisePayload types.Bool              `tfsdk:"concise_payload"`
+	Disabled       types.Bool              `tfsdk:"disabled"`
+	Destinations   WebhookDestinationSlice `tfsdk:"destination"`
+}
+
+type WebhookDestinationSlice []WebhookDestinationData
+
+func (s *WebhookDestinationSlice) FindByTargetURLAndHttpBasicAuth(t, a string) *WebhookDestinationData {
+	for i := range *s {
+		if (*s)[i].TargetURL.Value == t && (*s)[i].HttpBasicAuth.Value == a {
+			return &(*s)[i]
+		}
+	}
+	return nil
 }
 
 type WebhookDestinationData struct {
@@ -36,7 +47,6 @@ type WebhookCustomHeaderData struct {
 	Value types.String `tfsdk:"value"`
 }
 
-// Webhook Resource schema
 func (r resourceWebhookType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		Description: `
@@ -85,6 +95,7 @@ func (r resourceWebhookType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Di
 				NestingMode: tfsdk.BlockNestingModeList,
 				Blocks:      map[string]tfsdk.Block{},
 				MinItems:    1,
+				Validators:  []tfsdk.AttributeValidator{},
 				Attributes: map[string]tfsdk.Attribute{
 					"target_url": {
 						Type:     types.StringType,
@@ -118,7 +129,6 @@ func (r resourceWebhookType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Di
 	}, nil
 }
 
-// New resource instance
 func (r resourceWebhookType) NewResource(_ context.Context, p tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
 	return resourceWebhook{
 		p: *(p.(*provider)),
@@ -140,13 +150,19 @@ func (r resourceWebhook) Create(ctx context.Context, req tfsdk.CreateResourceReq
 	input := NewWebhookInput(&plan)
 	webhook, err := r.p.stack.WebHookCreate(ctx, *input)
 	if err != nil {
-		diags := processRemoteError(err)
-		resp.Diagnostics.Append(diags...)
+		resp.Diagnostics.Append(processRemoteError(err)...)
 		return
 	}
 
 	diags = processResponse(webhook, input)
 	resp.Diagnostics.Append(diags...)
+
+	//Set actual password as state
+	webhook.Destinations, err = copyHttpBasicPasswords(webhook.Destinations, plan.Destinations)
+	if err != nil {
+		resp.Diagnostics.AddError("Error copying http basic passwords", err.Error())
+		return
+	}
 
 	// Write to state
 	state := NewWebhookData(webhook)
@@ -173,6 +189,13 @@ func (r resourceWebhook) Read(ctx context.Context, req tfsdk.ReadResourceRequest
 			diags := processRemoteError(err)
 			resp.Diagnostics.Append(diags...)
 		}
+		return
+	}
+
+	//Set actual password as state
+	webhook.Destinations, err = copyHttpBasicPasswords(webhook.Destinations, state.Destinations)
+	if err != nil {
+		resp.Diagnostics.AddError("Error copying http basic passwords", err.Error())
 		return
 	}
 
@@ -231,6 +254,12 @@ func (r resourceWebhook) Update(ctx context.Context, req tfsdk.UpdateResourceReq
 		return
 	}
 
+	webhook.Destinations, err = copyHttpBasicPasswords(webhook.Destinations, plan.Destinations)
+	if err != nil {
+		resp.Diagnostics.AddError("Error copying http basic passwords", err.Error())
+		return
+	}
+
 	diags = processResponse(webhook, input)
 	resp.Diagnostics.Append(diags...)
 
@@ -245,17 +274,17 @@ func (r resourceWebhook) ImportState(ctx context.Context, req tfsdk.ImportResour
 }
 
 func NewWebhookData(webhook *management.WebHook) *WebhookData {
-	branches := []types.String{}
+	var branches []types.String
 	for i := range webhook.Branches {
 		branches = append(branches, types.String{Value: webhook.Branches[i]})
 	}
 
-	channels := []types.String{}
+	var channels []types.String
 	for i := range webhook.Channels {
 		channels = append(channels, types.String{Value: webhook.Channels[i]})
 	}
 
-	destinations := []WebhookDestinationData{}
+	var destinations []WebhookDestinationData
 	for i := range webhook.Destinations {
 		s := webhook.Destinations[i]
 
@@ -290,7 +319,7 @@ func NewWebhookData(webhook *management.WebHook) *WebhookData {
 }
 
 func NewWebhookInput(webhook *WebhookData) *management.WebHookInput {
-	destinations := []management.WebhookDestination{}
+	var destinations []management.WebhookDestination
 	for i := range webhook.Destinations {
 		s := webhook.Destinations[i]
 		dest := management.WebhookDestination{
