@@ -48,6 +48,11 @@ func (p *provider) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics)
 				Sensitive:   true,
 				Description: "The Authtoken is a read-write token used to make authorized CMA requests, and it is a user-specific token.",
 			},
+			"branch": {
+				Type:        types.StringType,
+				Optional:    true,
+				Description: "The branch to manage resources in. If not specified, the main branch will be used.",
+			},
 		},
 	}, nil
 }
@@ -58,6 +63,7 @@ type providerData struct {
 	AuthToken       types.String `tfsdk:"auth_token"`
 	ApiKey          types.String `tfsdk:"api_key"`
 	ManagementToken types.String `tfsdk:"management_token"`
+	Branch          types.String `tfsdk:"branch"`
 }
 
 func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderRequest, resp *tfsdk.ConfigureProviderResponse) {
@@ -90,6 +96,7 @@ func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 	stackAuth := management.StackAuth{
 		ApiKey:          config.ApiKey.Value,
 		ManagementToken: config.ManagementToken.Value,
+		Branch:          config.Branch.Value,
 	}
 
 	instance, err := c.Stack(&stackAuth)
