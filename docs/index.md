@@ -20,4 +20,5 @@ description: |-
 - `api_key` (String) The API key is a unique key assigned to each stack.
 - `auth_token` (String, Sensitive) The Authtoken is a read-write token used to make authorized CMA requests, and it is a user-specific token.
 - `base_url` (String) The BaseURL, e.g. https://eu-api.contentstack.com/. See https://www.contentstack.com/docs/developers/apis/content-management-api/#base-url
+- `branch` (String) The branch to manage resources in. If not specified, the main branch will be used.
 - `management_token` (String, Sensitive) Management Tokens are stack-level tokens, with no users attached to them.
