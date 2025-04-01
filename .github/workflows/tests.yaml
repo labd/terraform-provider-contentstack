@@ -36,7 +36,7 @@ jobs:
 
       - name: golangci-lint
         continue-on-error: true
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v7
         with:
           args: --issues-exit-code=0 --timeout=5m
 
