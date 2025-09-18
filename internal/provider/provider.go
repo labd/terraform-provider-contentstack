@@ -53,17 +53,35 @@ func (p *provider) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics)
 				Optional:    true,
 				Description: "The branch to manage resources in. If not specified, the main branch will be used.",
 			},
+			"rate_limit": {
+				Type:        types.Float64Type,
+				Optional:    true,
+				Description: "The maximum number of requests per second to the Contentstack API. Defaults to 10.0 to comply with API limits. Set to 0 to disable rate limiting.",
+			},
+			"rate_burst": {
+				Type:        types.Int64Type,
+				Optional:    true,
+				Description: "The maximum burst size for rate limiting. Defaults to 10. This allows short bursts of requests above the rate limit.",
+			},
+			"max_retries": {
+				Type:        types.Int64Type,
+				Optional:    true,
+				Description: "The maximum number of retry attempts for 429 (rate limit) responses. Defaults to 3. Uses exponential backoff: 1s, 2s, 4s, 8s, 16s, capped at 30s.",
+			},
 		},
 	}, nil
 }
 
 // Provider schema struct
 type providerData struct {
-	BaseURL         types.String `tfsdk:"base_url"`
-	AuthToken       types.String `tfsdk:"auth_token"`
-	ApiKey          types.String `tfsdk:"api_key"`
-	ManagementToken types.String `tfsdk:"management_token"`
-	Branch          types.String `tfsdk:"branch"`
+	BaseURL         types.String  `tfsdk:"base_url"`
+	AuthToken       types.String  `tfsdk:"auth_token"`
+	ApiKey          types.String  `tfsdk:"api_key"`
+	ManagementToken types.String  `tfsdk:"management_token"`
+	Branch          types.String  `tfsdk:"branch"`
+	RateLimit       types.Float64 `tfsdk:"rate_limit"`
+	RateBurst       types.Int64   `tfsdk:"rate_burst"`
+	MaxRetries      types.Int64   `tfsdk:"max_retries"`
 }
 
 func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderRequest, resp *tfsdk.ConfigureProviderResponse) {
@@ -82,6 +100,9 @@ func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 		HTTPClient: &http.Client{
 			Transport: management.DebugTransport,
 		},
+		RateLimit:  config.RateLimit.Value,
+		RateBurst:  int(config.RateBurst.Value),
+		MaxRetries: int(config.MaxRetries.Value),
 	}
 
 	c, err := management.NewClient(cfg)

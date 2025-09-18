@@ -1,6 +1,8 @@
 module github.com/labd/terraform-provider-contentstack
 
-go 1.18
+go 1.24.0
+
+toolchain go1.24.3
 
 require (
 	github.com/hashicorp/terraform-plugin-docs v0.9.0
@@ -59,6 +61,7 @@ require (
 	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2 // indirect
 	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
 	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/time v0.13.0 // indirect
 	google.golang.org/appengine v1.6.6 // indirect
 	google.golang.org/genproto v0.0.0-20200711021454-869866162049 // indirect
 	google.golang.org/grpc v1.46.0 // indirect
