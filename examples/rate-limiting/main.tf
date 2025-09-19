@@ -11,9 +11,11 @@ provider "contentstack" {
   api_key          = "<api_key>"
   management_token = "<management_token>"
 
-  rate_limit  = 8.0
-  rate_burst  = 5
-  max_retries = 3
+  rate_limit      = 8.0
+  rate_burst      = 5
+  max_retries     = 3
+  retry_wait_min  = 1
+  retry_wait_max  = 30
 }
 
 resource "contentstack_content_type" "example" {
