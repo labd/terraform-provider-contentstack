@@ -65,3 +65,5 @@ require (
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0 // indirect
 )
+
+replace github.com/labd/contentstack-go-sdk => github.com/rasmus-lisborg-19/contentstack-go-sdk v0.1.1
