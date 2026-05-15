@@ -11,4 +11,9 @@ provider "contentstack" {
   api_key          = "<api_key>"
   management_token = "<management_token>"
   branch           = "main"
+
+  # Optional: retry configuration for 429 responses
+  max_retries    = 3
+  retry_wait_min = 1
+  retry_wait_max = 30
 }
