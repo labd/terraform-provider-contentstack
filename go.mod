@@ -6,7 +6,7 @@ require (
 	github.com/hashicorp/terraform-plugin-docs v0.9.0
 	github.com/hashicorp/terraform-plugin-framework v0.8.1-0.20220531184835-f0051665855e
 	github.com/hashicorp/terraform-plugin-go v0.9.1
-	github.com/labd/contentstack-go-sdk v0.1.0
+	github.com/labd/contentstack-go-sdk v0.1.1
 	github.com/stretchr/testify v1.7.0
 )
 
@@ -65,5 +65,3 @@ require (
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0 // indirect
 )
-
-replace github.com/labd/contentstack-go-sdk => github.com/rasmus-lisborg-19/contentstack-go-sdk v0.1.1
