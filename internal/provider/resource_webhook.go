@@ -270,7 +270,7 @@ func (r resourceWebhook) Update(ctx context.Context, req tfsdk.UpdateResourceReq
 }
 
 func (r resourceWebhook) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
-	tfsdk.ResourceImportStatePassthroughID(ctx, tftypes.NewAttributePath().WithAttributeName("id"), req, resp)
+	tfsdk.ResourceImportStatePassthroughID(ctx, tftypes.NewAttributePath().WithAttributeName("uid"), req, resp)
 }
 
 func NewWebhookData(webhook *management.WebHook) *WebhookData {

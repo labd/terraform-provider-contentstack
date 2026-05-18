@@ -1,0 +1,2 @@
+kind: Fixed
+body: Fix ImportState using non-existent "id" attribute path — all resources use "uid" as their identifier, causing a State Write Error on any import operation
