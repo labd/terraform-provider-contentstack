@@ -179,7 +179,7 @@ func (r resourceLocale) Update(ctx context.Context, req tfsdk.UpdateResourceRequ
 }
 
 func (r resourceLocale) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
-	tfsdk.ResourceImportStatePassthroughID(ctx, tftypes.NewAttributePath().WithAttributeName("id"), req, resp)
+	tfsdk.ResourceImportStatePassthroughID(ctx, tftypes.NewAttributePath().WithAttributeName("uid"), req, resp)
 }
 
 func NewLocaleData(field *management.Locale) *LocaleData {

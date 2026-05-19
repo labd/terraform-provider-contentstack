@@ -186,7 +186,7 @@ func (r resourceEnvironment) Update(ctx context.Context, req tfsdk.UpdateResourc
 }
 
 func (r resourceEnvironment) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
-	tfsdk.ResourceImportStatePassthroughID(ctx, tftypes.NewAttributePath().WithAttributeName("id"), req, resp)
+	tfsdk.ResourceImportStatePassthroughID(ctx, tftypes.NewAttributePath().WithAttributeName("uid"), req, resp)
 }
 
 func NewEnvironmentData(environment *management.Environment) *EnvironmentData {
