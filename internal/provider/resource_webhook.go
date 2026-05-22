@@ -5,13 +5,12 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/labd/contentstack-go-sdk/management"
 )
-
-type resourceWebhookType struct{}
 
 type WebhookData struct {
 	UID            types.String            `tfsdk:"uid"`
@@ -28,7 +27,7 @@ type WebhookDestinationSlice []WebhookDestinationData
 
 func (s *WebhookDestinationSlice) FindByTargetURLAndHttpBasicAuth(t, a string) *WebhookDestinationData {
 	for i := range *s {
-		if (*s)[i].TargetURL.Value == t && (*s)[i].HttpBasicAuth.Value == a {
+		if (*s)[i].TargetURL.ValueString() == t && (*s)[i].HttpBasicAuth.ValueString() == a {
 			return &(*s)[i]
 		}
 	}
@@ -47,99 +46,84 @@ type WebhookCustomHeaderData struct {
 	Value types.String `tfsdk:"value"`
 }
 
-func (r resourceWebhookType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfsdk.Schema{
+type resourceWebhook struct {
+	p *contentstackProvider
+}
+
+// Metadata
+func (r *resourceWebhook) Metadata(_ context.Context, _ resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = "contentstack_webhook"
+}
+
+func (r *resourceWebhook) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
 		Description: `
 		A webhook is a user-defined HTTP callback. It is a mechanism that sends
 		real-time information to any third-party app or service.
 		`,
-		Attributes: map[string]tfsdk.Attribute{
-			"uid": {
-				Type:     types.StringType,
+		Attributes: map[string]schema.Attribute{
+			"uid": schema.StringAttribute{
 				Computed: true,
 			},
-			"name": {
-				Type:     types.StringType,
+			"name": schema.StringAttribute{
 				Required: true,
 			},
-			"branches": {
-				Type: types.ListType{
-					ElemType: types.StringType,
-				},
-				Optional: true,
+			"branches": schema.ListAttribute{
+				ElementType: types.StringType,
+				Optional:    true,
 			},
-			"channels": {
-				Type: types.ListType{
-					ElemType: types.StringType,
-				},
-				Optional: true,
+			"channels": schema.ListAttribute{
+				ElementType: types.StringType,
+				Optional:    true,
 			},
-			"retry_policy": {
-				Type:        types.StringType,
+			"retry_policy": schema.StringAttribute{
 				Required:    true,
 				Description: "should be set to `manual`",
 			},
-			"disabled": {
-				Type:        types.BoolType,
+			"disabled": schema.BoolAttribute{
 				Optional:    true,
 				Description: "allows you to enable or disable the webhook.",
 			},
-			"concise_payload": {
-				Type:        types.BoolType,
+			"concise_payload": schema.BoolAttribute{
 				Optional:    true,
 				Description: "allows you to send a concise JSON payload to the target URL when a specific event occurs. To send a comprehensive JSON payload, you can set its value to false.",
 			},
 		},
-		Blocks: map[string]tfsdk.Block{
-			"destination": {
-				NestingMode: tfsdk.BlockNestingModeList,
-				Blocks:      map[string]tfsdk.Block{},
-				MinItems:    1,
-				Validators:  []tfsdk.AttributeValidator{},
-				Attributes: map[string]tfsdk.Attribute{
-					"target_url": {
-						Type:     types.StringType,
-						Required: true,
-					},
-					"http_basic_auth": {
-						Type:     types.StringType,
-						Required: true,
-					},
-					"http_basic_password": {
-						Type:      types.StringType,
-						Required:  true,
-						Sensitive: true,
-					},
-					"custom_headers": {
-						Optional: true,
-						Attributes: tfsdk.ListNestedAttributes(map[string]tfsdk.Attribute{
-							"header_name": {
-								Type:     types.StringType,
-								Required: true,
+		Blocks: map[string]schema.Block{
+			"destination": schema.ListNestedBlock{
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"target_url": schema.StringAttribute{
+							Required: true,
+						},
+						"http_basic_auth": schema.StringAttribute{
+							Required: true,
+						},
+						"http_basic_password": schema.StringAttribute{
+							Required:  true,
+							Sensitive: true,
+						},
+						"custom_headers": schema.ListNestedAttribute{
+							Optional: true,
+							NestedObject: schema.NestedAttributeObject{
+								Attributes: map[string]schema.Attribute{
+									"header_name": schema.StringAttribute{
+										Required: true,
+									},
+									"value": schema.StringAttribute{
+										Required: true,
+									},
+								},
 							},
-							"value": {
-								Type:     types.StringType,
-								Required: true,
-							},
-						}),
+						},
 					},
 				},
 			},
 		},
-	}, nil
+	}
 }
 
-func (r resourceWebhookType) NewResource(_ context.Context, p tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
-	return resourceWebhook{
-		p: *(p.(*provider)),
-	}, nil
-}
-
-type resourceWebhook struct {
-	p provider
-}
-
-func (r resourceWebhook) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
+func (r *resourceWebhook) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan WebhookData
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -170,7 +154,7 @@ func (r resourceWebhook) Create(ctx context.Context, req tfsdk.CreateResourceReq
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r resourceWebhook) Read(ctx context.Context, req tfsdk.ReadResourceRequest, resp *tfsdk.ReadResourceResponse) {
+func (r *resourceWebhook) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state WebhookData
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -178,12 +162,12 @@ func (r resourceWebhook) Read(ctx context.Context, req tfsdk.ReadResourceRequest
 		return
 	}
 
-	webhook, err := r.p.stack.WebHookFetch(ctx, state.UID.Value)
+	webhook, err := r.p.stack.WebHookFetch(ctx, state.UID.ValueString())
 	if err != nil {
 		if IsNotFoundError(err) {
 			d := diag.NewErrorDiagnostic(
 				"Error retrieving webhook",
-				fmt.Sprintf("The webhook with UID %s was not found.", state.UID.Value))
+				fmt.Sprintf("The webhook with UID %s was not found.", state.UID.ValueString()))
 			resp.Diagnostics.Append(d)
 		} else {
 			diags := processRemoteError(err)
@@ -209,7 +193,7 @@ func (r resourceWebhook) Read(ctx context.Context, req tfsdk.ReadResourceRequest
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r resourceWebhook) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
+func (r *resourceWebhook) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var state WebhookData
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -218,7 +202,7 @@ func (r resourceWebhook) Delete(ctx context.Context, req tfsdk.DeleteResourceReq
 	}
 
 	// Delete order by calling API
-	err := r.p.stack.WebHookDelete(ctx, state.UID.Value)
+	err := r.p.stack.WebHookDelete(ctx, state.UID.ValueString())
 	if err != nil {
 		diags = processRemoteError(err)
 		resp.Diagnostics.Append(diags...)
@@ -229,7 +213,7 @@ func (r resourceWebhook) Delete(ctx context.Context, req tfsdk.DeleteResourceReq
 	resp.State.RemoveResource(ctx)
 }
 
-func (r resourceWebhook) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
+func (r *resourceWebhook) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	// Get plan values
 	var plan WebhookData
 	diags := req.Plan.Get(ctx, &plan)
@@ -247,7 +231,7 @@ func (r resourceWebhook) Update(ctx context.Context, req tfsdk.UpdateResourceReq
 	}
 
 	input := NewWebhookInput(&plan)
-	webhook, err := r.p.stack.WebHookUpdate(ctx, state.UID.Value, *input)
+	webhook, err := r.p.stack.WebHookUpdate(ctx, state.UID.ValueString(), *input)
 	if err != nil {
 		diags = processRemoteError(err)
 		resp.Diagnostics.Append(diags...)
@@ -269,19 +253,19 @@ func (r resourceWebhook) Update(ctx context.Context, req tfsdk.UpdateResourceReq
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r resourceWebhook) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
-	tfsdk.ResourceImportStatePassthroughID(ctx, tftypes.NewAttributePath().WithAttributeName("uid"), req, resp)
+func (r *resourceWebhook) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("uid"), req, resp)
 }
 
 func NewWebhookData(webhook *management.WebHook) *WebhookData {
 	var branches []types.String
 	for i := range webhook.Branches {
-		branches = append(branches, types.String{Value: webhook.Branches[i]})
+		branches = append(branches, types.StringValue(webhook.Branches[i]))
 	}
 
 	var channels []types.String
 	for i := range webhook.Channels {
-		channels = append(channels, types.String{Value: webhook.Channels[i]})
+		channels = append(channels, types.StringValue(webhook.Channels[i]))
 	}
 
 	var destinations []WebhookDestinationData
@@ -289,15 +273,15 @@ func NewWebhookData(webhook *management.WebHook) *WebhookData {
 		s := webhook.Destinations[i]
 
 		dest := WebhookDestinationData{
-			TargetURL:         types.String{Value: s.TargetURL},
-			HttpBasicAuth:     types.String{Value: s.HttpBasicAuth},
-			HttpBasicPassword: types.String{Value: s.HttpBasicPassword},
+			TargetURL:         types.StringValue(s.TargetURL),
+			HttpBasicAuth:     types.StringValue(s.HttpBasicAuth),
+			HttpBasicPassword: types.StringValue(s.HttpBasicPassword),
 		}
 
 		for j := range s.CustomHeaders {
 			header := WebhookCustomHeaderData{
-				Name:  types.String{Value: s.CustomHeaders[j].Name},
-				Value: types.String{Value: s.CustomHeaders[j].Value},
+				Name:  types.StringValue(s.CustomHeaders[j].Name),
+				Value: types.StringValue(s.CustomHeaders[j].Value),
 			}
 			dest.CustomHeaders = append(dest.CustomHeaders, header)
 		}
@@ -306,11 +290,11 @@ func NewWebhookData(webhook *management.WebHook) *WebhookData {
 	}
 
 	state := &WebhookData{
-		UID:            types.String{Value: webhook.UID},
-		Name:           types.String{Value: webhook.Name},
-		RetryPolicy:    types.String{Value: webhook.RetryPolicy},
-		ConcisePayload: types.Bool{Value: webhook.ConcisePayload},
-		Disabled:       types.Bool{Value: webhook.Disabled},
+		UID:            types.StringValue(webhook.UID),
+		Name:           types.StringValue(webhook.Name),
+		RetryPolicy:    types.StringValue(webhook.RetryPolicy),
+		ConcisePayload: types.BoolValue(webhook.ConcisePayload),
+		Disabled:       types.BoolValue(webhook.Disabled),
 		Channels:       channels,
 		Branches:       branches,
 		Destinations:   destinations,
@@ -323,15 +307,15 @@ func NewWebhookInput(webhook *WebhookData) *management.WebHookInput {
 	for i := range webhook.Destinations {
 		s := webhook.Destinations[i]
 		dest := management.WebhookDestination{
-			TargetURL:         s.TargetURL.Value,
-			HttpBasicAuth:     s.HttpBasicAuth.Value,
-			HttpBasicPassword: s.HttpBasicPassword.Value,
+			TargetURL:         s.TargetURL.ValueString(),
+			HttpBasicAuth:     s.HttpBasicAuth.ValueString(),
+			HttpBasicPassword: s.HttpBasicPassword.ValueString(),
 		}
 
 		for j := range s.CustomHeaders {
 			header := management.WebhookHeader{
-				Name:  s.CustomHeaders[j].Name.Value,
-				Value: s.CustomHeaders[j].Value.Value,
+				Name:  s.CustomHeaders[j].Name.ValueString(),
+				Value: s.CustomHeaders[j].Value.ValueString(),
 			}
 			dest.CustomHeaders = append(dest.CustomHeaders, header)
 		}
@@ -339,16 +323,16 @@ func NewWebhookInput(webhook *WebhookData) *management.WebHookInput {
 	}
 
 	input := &management.WebHookInput{
-		Name:           webhook.Name.Value,
-		RetryPolicy:    webhook.RetryPolicy.Value,
+		Name:           webhook.Name.ValueString(),
+		RetryPolicy:    webhook.RetryPolicy.ValueString(),
 		Destinations:   destinations,
-		ConcisePayload: webhook.ConcisePayload.Value,
+		ConcisePayload: webhook.ConcisePayload.ValueBool(),
 	}
 	for i := range webhook.Channels {
-		input.Channels = append(input.Channels, webhook.Channels[i].Value)
+		input.Channels = append(input.Channels, webhook.Channels[i].ValueString())
 	}
 	for i := range webhook.Branches {
-		input.Branches = append(input.Branches, webhook.Branches[i].Value)
+		input.Branches = append(input.Branches, webhook.Branches[i].ValueString())
 	}
 
 	return input

@@ -1,6 +1,6 @@
 module github.com/labd/terraform-provider-contentstack
 
-go 1.25.8
+go 1.26.3
 
 require (
 	github.com/hashicorp/go-retryablehttp v0.7.8
