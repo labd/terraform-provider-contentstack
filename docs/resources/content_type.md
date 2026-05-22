@@ -4,12 +4,12 @@ page_title: "contentstack_content_type Resource - terraform-provider-contentstac
 subcategory: ""
 description: |-
   Content type defines the structure or schema of a page or a section of
-      your web or mobile property. To create content for your application, you
-      are required to first create a content type, and then create entries
-      using the content type.
+  	your web or mobile property. To create content for your application, you
+  	are required to first create a content type, and then create entries
+  	using the content type.
   
-      Note: Removing a field or modifying its properties may result in data
-      loss or invalidate field visibility rules.
+  	Note: Removing a field or modifying its properties may result in data
+  	loss or invalidate field visibility rules.
 ---
 
 # contentstack_content_type (Resource)
@@ -91,5 +91,3 @@ JSON
 - `description` (String)
 - `schema` (String) The schema as JSON. Use jsonencode(jsonecode(<schema>)) to work around wrong changes.
 - `uid` (String)
-
-
