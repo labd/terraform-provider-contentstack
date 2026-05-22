@@ -22,3 +22,6 @@ description: |-
 - `base_url` (String) The BaseURL, e.g. https://eu-api.contentstack.com/. See https://www.contentstack.com/docs/developers/apis/content-management-api/#base-url
 - `branch` (String) The branch to manage resources in. If not specified, the main branch will be used.
 - `management_token` (String, Sensitive) Management Tokens are stack-level tokens, with no users attached to them.
+- `max_retries` (Number) The maximum number of retry attempts for 429 (rate limit) responses. Defaults to 3. Uses exponential backoff with jitter.
+- `retry_wait_max` (Number) The maximum wait time in seconds between retries. Defaults to 30 seconds.
+- `retry_wait_min` (Number) The minimum wait time in seconds between retries. Defaults to 1 second.
