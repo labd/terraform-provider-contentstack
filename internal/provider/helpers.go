@@ -2,11 +2,11 @@ package provider
 
 import (
 	"fmt"
-	"github.com/labd/contentstack-go-sdk/management"
 	"reflect"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/labd/contentstack-go-sdk/management"
 )
 
 func processResponse(resp any, input any) diag.Diagnostics {
@@ -28,7 +28,7 @@ func processResponse(resp any, input any) diag.Diagnostics {
 			branches.Set(t)
 
 			diags.AddAttributeWarning(
-				tftypes.NewAttributePath().WithAttributeName("branches"),
+				path.Root("branches"),
 				"Branches are not part of your plan.",
 				"Branches are not part of your plan. Please contact support@contentstack.com to upgrade your plan.",
 			)
@@ -47,7 +47,7 @@ func copyHttpBasicPasswords(wd []management.WebhookDestination, data WebhookDest
 			return nil, fmt.Errorf("d %s not found in planned state", d.TargetURL)
 		}
 
-		d.HttpBasicPassword = planned.HttpBasicPassword.Value
+		d.HttpBasicPassword = planned.HttpBasicPassword.ValueString()
 		cd = append(cd, d)
 	}
 	return cd, nil

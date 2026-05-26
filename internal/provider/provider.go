@@ -6,8 +6,10 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-retryablehttp"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/provider"
+	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/labd/contentstack-go-sdk/management"
 )
@@ -28,66 +30,64 @@ func (r *retryableRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 	return r.retryClient.Do(retryReq)
 }
 
-func New(version string) func() tfsdk.Provider {
-	return func() tfsdk.Provider {
-		return &provider{version: version}
+func New(version string) func() provider.Provider {
+	return func() provider.Provider {
+		return &contentstackProvider{version: version}
 	}
 }
 
-type provider struct {
+type contentstackProvider struct {
 	stack   *management.StackInstance
 	client  *management.Client
 	version string
 }
 
-// GetSchema
-func (p *provider) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfsdk.Schema{
-		Attributes: map[string]tfsdk.Attribute{
-			"base_url": {
-				Type:        types.StringType,
+// Metadata
+func (p *contentstackProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
+	resp.TypeName = "contentstack"
+	resp.Version = p.version
+}
+
+// Schema
+func (p *contentstackProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
+	resp.Schema = schema.Schema{
+		Attributes: map[string]schema.Attribute{
+			"base_url": schema.StringAttribute{
 				Optional:    true,
 				Description: "The BaseURL, e.g. https://eu-api.contentstack.com/. See https://www.contentstack.com/docs/developers/apis/content-management-api/#base-url",
 			},
-			"api_key": {
-				Type:        types.StringType,
+			"api_key": schema.StringAttribute{
 				Optional:    true,
 				Description: "The API key is a unique key assigned to each stack.",
 			},
-			"management_token": {
-				Type:        types.StringType,
+			"management_token": schema.StringAttribute{
 				Optional:    true,
 				Sensitive:   true,
 				Description: "Management Tokens are stack-level tokens, with no users attached to them.",
 			},
-			"auth_token": {
-				Type:        types.StringType,
+			"auth_token": schema.StringAttribute{
 				Optional:    true,
 				Sensitive:   true,
 				Description: "The Authtoken is a read-write token used to make authorized CMA requests, and it is a user-specific token.",
 			},
-			"branch": {
-				Type:        types.StringType,
+			"branch": schema.StringAttribute{
 				Optional:    true,
 				Description: "The branch to manage resources in. If not specified, the main branch will be used.",
 			},
-			"max_retries": {
-				Type:        types.Int64Type,
+			"max_retries": schema.Int64Attribute{
 				Optional:    true,
 				Description: "The maximum number of retry attempts for 429 (rate limit) responses. Defaults to 3. Uses exponential backoff with jitter.",
 			},
-			"retry_wait_min": {
-				Type:        types.Int64Type,
+			"retry_wait_min": schema.Int64Attribute{
 				Optional:    true,
 				Description: "The minimum wait time in seconds between retries. Defaults to 1 second.",
 			},
-			"retry_wait_max": {
-				Type:        types.Int64Type,
+			"retry_wait_max": schema.Int64Attribute{
 				Optional:    true,
 				Description: "The maximum wait time in seconds between retries. Defaults to 30 seconds.",
 			},
 		},
-	}, nil
+	}
 }
 
 // Provider schema struct
@@ -102,7 +102,7 @@ type providerData struct {
 	RetryWaitMax    types.Int64  `tfsdk:"retry_wait_max"`
 }
 
-func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderRequest, resp *tfsdk.ConfigureProviderResponse) {
+func (p *contentstackProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	// Retrieve provider data from configuration
 	var config providerData
 	diags := req.Config.Get(ctx, &config)
@@ -116,19 +116,19 @@ func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 
 	maxRetries := 3
 	if !config.MaxRetries.IsNull() && !config.MaxRetries.IsUnknown() {
-		maxRetries = int(config.MaxRetries.Value)
+		maxRetries = int(config.MaxRetries.ValueInt64())
 	}
 	retryClient.RetryMax = maxRetries
 
 	retryWaitMin := 1 * time.Second
 	if !config.RetryWaitMin.IsNull() && !config.RetryWaitMin.IsUnknown() {
-		retryWaitMin = time.Duration(config.RetryWaitMin.Value) * time.Second
+		retryWaitMin = time.Duration(config.RetryWaitMin.ValueInt64()) * time.Second
 	}
 	retryClient.RetryWaitMin = retryWaitMin
 
 	retryWaitMax := 30 * time.Second
 	if !config.RetryWaitMax.IsNull() && !config.RetryWaitMax.IsUnknown() {
-		retryWaitMax = time.Duration(config.RetryWaitMax.Value) * time.Second
+		retryWaitMax = time.Duration(config.RetryWaitMax.ValueInt64()) * time.Second
 	}
 	retryClient.RetryWaitMax = retryWaitMax
 
@@ -159,8 +159,8 @@ func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 	}
 
 	cfg := management.ClientConfig{
-		BaseURL:    config.BaseURL.Value,
-		AuthToken:  config.AuthToken.Value,
+		BaseURL:    config.BaseURL.ValueString(),
+		AuthToken:  config.AuthToken.ValueString(),
 		HTTPClient: httpClient,
 	}
 
@@ -174,9 +174,9 @@ func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 	}
 
 	stackAuth := management.StackAuth{
-		ApiKey:          config.ApiKey.Value,
-		ManagementToken: config.ManagementToken.Value,
-		Branch:          config.Branch.Value,
+		ApiKey:          config.ApiKey.ValueString(),
+		ManagementToken: config.ManagementToken.ValueString(),
+		Branch:          config.Branch.ValueString(),
 	}
 
 	instance, err := c.Stack(&stackAuth)
@@ -192,18 +192,18 @@ func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 	p.stack = instance
 }
 
-// GetResources - Defines provider resources
-func (p *provider) GetResources(_ context.Context) (map[string]tfsdk.ResourceType, diag.Diagnostics) {
-	return map[string]tfsdk.ResourceType{
-		"contentstack_content_type": resourceContentTypeType{},
-		"contentstack_environment":  resourceEnvironmentType{},
-		"contentstack_global_field": resourceGlobalFieldType{},
-		"contentstack_locale":       resourceLocaleType{},
-		"contentstack_webhook":      resourceWebhookType{},
-	}, nil
+// Resources - Defines provider resources
+func (p *contentstackProvider) Resources(_ context.Context) []func() resource.Resource {
+	return []func() resource.Resource{
+		func() resource.Resource { return &resourceContentType{p: p} },
+		func() resource.Resource { return &resourceEnvironment{p: p} },
+		func() resource.Resource { return &resourceGlobalField{p: p} },
+		func() resource.Resource { return &resourceLocale{p: p} },
+		func() resource.Resource { return &resourceWebhook{p: p} },
+	}
 }
 
-// GetDataSources - Defines provider data sources
-func (p *provider) GetDataSources(_ context.Context) (map[string]tfsdk.DataSourceType, diag.Diagnostics) {
-	return map[string]tfsdk.DataSourceType{}, nil
+// DataSources - Defines provider data sources
+func (p *contentstackProvider) DataSources(_ context.Context) []func() datasource.DataSource {
+	return []func() datasource.DataSource{}
 }

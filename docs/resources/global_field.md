@@ -4,9 +4,9 @@ page_title: "contentstack_global_field Resource - terraform-provider-contentstac
 subcategory: ""
 description: |-
   A Global field is a reusable field (or group of fields) that you can
-      define once and reuse in any content type within your stack. This
-      eliminates the need (and thereby time and efforts) to create the same
-      set of fields repeatedly in multiple content types.
+  	define once and reuse in any content type within your stack. This
+  	eliminates the need (and thereby time and efforts) to create the same
+  	set of fields repeatedly in multiple content types.
 ---
 
 # contentstack_global_field (Resource)
@@ -87,5 +87,3 @@ JSON
 - `description` (String)
 - `maintain_revisions` (Boolean)
 - `schema` (String) The schema as JSON. Use jsonencode(jsonecode(<schema>)) to work around wrong changes.
-
-

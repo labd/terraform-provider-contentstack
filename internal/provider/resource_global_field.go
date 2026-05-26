@@ -6,13 +6,12 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/labd/contentstack-go-sdk/management"
 )
-
-type resourceGlobalFieldType struct{}
 
 type GlobalFieldData struct {
 	UID               types.String `tfsdk:"uid"`
@@ -22,53 +21,46 @@ type GlobalFieldData struct {
 	Schema            types.String `tfsdk:"schema"`
 }
 
+type resourceGlobalField struct {
+	p *contentstackProvider
+}
+
+// Metadata
+func (r *resourceGlobalField) Metadata(_ context.Context, _ resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = "contentstack_global_field"
+}
+
 // Global Field Resource schema
-func (r resourceGlobalFieldType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfsdk.Schema{
+func (r *resourceGlobalField) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
 		Description: `
 		A Global field is a reusable field (or group of fields) that you can
 		define once and reuse in any content type within your stack. This
 		eliminates the need (and thereby time and efforts) to create the same
 		set of fields repeatedly in multiple content types.
 		`,
-		Attributes: map[string]tfsdk.Attribute{
-			"uid": {
-				Type:     types.StringType,
+		Attributes: map[string]schema.Attribute{
+			"uid": schema.StringAttribute{
 				Required: true,
 			},
-			"title": {
-				Type:     types.StringType,
+			"title": schema.StringAttribute{
 				Required: true,
 			},
-			"maintain_revisions": {
-				Type:     types.BoolType,
+			"maintain_revisions": schema.BoolAttribute{
 				Optional: true,
 			},
-			"description": {
-				Type:     types.StringType,
+			"description": schema.StringAttribute{
 				Optional: true,
 			},
-			"schema": {
-				Type:        types.StringType,
+			"schema": schema.StringAttribute{
 				Optional:    true,
 				Description: "The schema as JSON. Use jsonencode(jsonecode(<schema>)) to work around wrong changes.",
 			},
 		},
-	}, nil
+	}
 }
 
-// New resource instance
-func (r resourceGlobalFieldType) NewResource(_ context.Context, p tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
-	return resourceGlobalField{
-		p: *(p.(*provider)),
-	}, nil
-}
-
-type resourceGlobalField struct {
-	p provider
-}
-
-func (r resourceGlobalField) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
+func (r *resourceGlobalField) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan GlobalFieldData
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -94,7 +86,7 @@ func (r resourceGlobalField) Create(ctx context.Context, req tfsdk.CreateResourc
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r resourceGlobalField) Read(ctx context.Context, req tfsdk.ReadResourceRequest, resp *tfsdk.ReadResourceResponse) {
+func (r *resourceGlobalField) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state GlobalFieldData
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -102,12 +94,12 @@ func (r resourceGlobalField) Read(ctx context.Context, req tfsdk.ReadResourceReq
 		return
 	}
 
-	resource, err := r.p.stack.GlobalFieldFetch(ctx, state.UID.Value)
+	resource, err := r.p.stack.GlobalFieldFetch(ctx, state.UID.ValueString())
 	if err != nil {
 		if IsNotFoundError(err) {
 			d := diag.NewErrorDiagnostic(
 				"Error retrieving global field",
-				fmt.Sprintf("The global field with UID %s was not found.", state.UID.Value))
+				fmt.Sprintf("The global field with UID %s was not found.", state.UID.ValueString()))
 			resp.Diagnostics.Append(d)
 		} else {
 			diags := processRemoteError(err)
@@ -126,7 +118,7 @@ func (r resourceGlobalField) Read(ctx context.Context, req tfsdk.ReadResourceReq
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r resourceGlobalField) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
+func (r *resourceGlobalField) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var state GlobalFieldData
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -135,7 +127,7 @@ func (r resourceGlobalField) Delete(ctx context.Context, req tfsdk.DeleteResourc
 	}
 
 	// Delete order by calling API
-	err := r.p.stack.GlobalFieldDelete(ctx, state.UID.Value)
+	err := r.p.stack.GlobalFieldDelete(ctx, state.UID.ValueString())
 	if err != nil {
 		diags = processRemoteError(err)
 		resp.Diagnostics.Append(diags...)
@@ -146,7 +138,7 @@ func (r resourceGlobalField) Delete(ctx context.Context, req tfsdk.DeleteResourc
 	resp.State.RemoveResource(ctx)
 }
 
-func (r resourceGlobalField) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
+func (r *resourceGlobalField) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	// Get plan values
 	var plan GlobalFieldData
 	diags := req.Plan.Get(ctx, &plan)
@@ -164,7 +156,7 @@ func (r resourceGlobalField) Update(ctx context.Context, req tfsdk.UpdateResourc
 	}
 
 	input := NewGlobalFieldInput(&plan)
-	resource, err := r.p.stack.GlobalFieldUpdate(ctx, state.UID.Value, *input)
+	resource, err := r.p.stack.GlobalFieldUpdate(ctx, state.UID.ValueString(), *input)
 	if err != nil {
 		diags = processRemoteError(err)
 		resp.Diagnostics.Append(diags...)
@@ -181,8 +173,8 @@ func (r resourceGlobalField) Update(ctx context.Context, req tfsdk.UpdateResourc
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r resourceGlobalField) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
-	tfsdk.ResourceImportStatePassthroughID(ctx, tftypes.NewAttributePath().WithAttributeName("uid"), req, resp)
+func (r *resourceGlobalField) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("uid"), req, resp)
 }
 
 func NewGlobalFieldData(field *management.GlobalField) *GlobalFieldData {
@@ -193,23 +185,27 @@ func NewGlobalFieldData(field *management.GlobalField) *GlobalFieldData {
 	}
 
 	state := &GlobalFieldData{
-		UID:               types.String{Value: field.UID},
-		Title:             types.String{Value: field.Title},
-		Description:       types.String{Value: field.Description},
-		MaintainRevisions: types.Bool{Value: field.MaintainRevisions},
-		Schema:            types.String{Value: string(schemaContent)},
+		UID:               types.StringValue(field.UID),
+		Title:             types.StringValue(field.Title),
+		Description:       types.StringValue(field.Description),
+		MaintainRevisions: types.BoolValue(field.MaintainRevisions),
+		Schema:            types.StringValue(string(schemaContent)),
 	}
 	return state
 }
 
 func NewGlobalFieldInput(field *GlobalFieldData) *management.GlobalFieldInput {
 
+	uid := field.UID.ValueString()
+	title := field.Title.ValueString()
+	description := field.Description.ValueString()
+
 	input := &management.GlobalFieldInput{
-		UID:               &field.UID.Value,
-		Title:             &field.Title.Value,
-		Description:       &field.Description.Value,
-		MaintainRevisions: field.MaintainRevisions.Value,
-		Schema:            json.RawMessage(field.Schema.Value),
+		UID:               &uid,
+		Title:             &title,
+		Description:       &description,
+		MaintainRevisions: field.MaintainRevisions.ValueBool(),
+		Schema:            json.RawMessage(field.Schema.ValueString()),
 	}
 
 	return input

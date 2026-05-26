@@ -5,13 +5,12 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/labd/contentstack-go-sdk/management"
 )
-
-type resourceEnvironmentType struct{}
 
 type EnvironmentData struct {
 	UID  types.String         `tfsdk:"uid"`
@@ -24,57 +23,50 @@ type EnvironmentUrlData struct {
 	URL    types.String `tfsdk:"url"`
 }
 
+type resourceEnvironment struct {
+	p *contentstackProvider
+}
+
+// Metadata
+func (r *resourceEnvironment) Metadata(_ context.Context, _ resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = "contentstack_environment"
+}
+
 // Environment Resource schema
-func (r resourceEnvironmentType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfsdk.Schema{
+func (r *resourceEnvironment) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
 		Description: `
 		Contentstack environment are designated destinations to which you can publish
 		your content. Environments are global, meaning they are available across all
 		branches of your stack. An environment can also have a list of URLs to be used
 		as a prefix for published content.
 		`,
-		Attributes: map[string]tfsdk.Attribute{
-			"uid": {
-				Type:     types.StringType,
+		Attributes: map[string]schema.Attribute{
+			"uid": schema.StringAttribute{
 				Computed: true,
 			},
-			"name": {
-				Type:     types.StringType,
+			"name": schema.StringAttribute{
 				Required: true,
 			},
 		},
-		Blocks: map[string]tfsdk.Block{
-			"url": {
-				NestingMode: tfsdk.BlockNestingModeList,
-				Blocks:      map[string]tfsdk.Block{},
-				MinItems:    0,
-				Attributes: map[string]tfsdk.Attribute{
-					"locale": {
-						Type:     types.StringType,
-						Required: true,
-					},
-					"url": {
-						Type:     types.StringType,
-						Required: true,
+		Blocks: map[string]schema.Block{
+			"url": schema.ListNestedBlock{
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"locale": schema.StringAttribute{
+							Required: true,
+						},
+						"url": schema.StringAttribute{
+							Required: true,
+						},
 					},
 				},
 			},
 		},
-	}, nil
+	}
 }
 
-// New resource instance
-func (r resourceEnvironmentType) NewResource(_ context.Context, p tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
-	return resourceEnvironment{
-		p: *(p.(*provider)),
-	}, nil
-}
-
-type resourceEnvironment struct {
-	p provider
-}
-
-func (r resourceEnvironment) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
+func (r *resourceEnvironment) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan EnvironmentData
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -99,7 +91,7 @@ func (r resourceEnvironment) Create(ctx context.Context, req tfsdk.CreateResourc
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r resourceEnvironment) Read(ctx context.Context, req tfsdk.ReadResourceRequest, resp *tfsdk.ReadResourceResponse) {
+func (r *resourceEnvironment) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state EnvironmentData
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -107,12 +99,12 @@ func (r resourceEnvironment) Read(ctx context.Context, req tfsdk.ReadResourceReq
 		return
 	}
 
-	environment, err := r.p.stack.EnvironmentFetch(ctx, state.Name.Value)
+	environment, err := r.p.stack.EnvironmentFetch(ctx, state.Name.ValueString())
 	if err != nil {
 		if IsNotFoundError(err) {
 			d := diag.NewErrorDiagnostic(
 				"Error retrieving environment",
-				fmt.Sprintf("The environment with Name %s was not found.", state.Name.Value))
+				fmt.Sprintf("The environment with Name %s was not found.", state.Name.ValueString()))
 			resp.Diagnostics.Append(d)
 		} else {
 			diags := processRemoteError(err)
@@ -131,7 +123,7 @@ func (r resourceEnvironment) Read(ctx context.Context, req tfsdk.ReadResourceReq
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r resourceEnvironment) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
+func (r *resourceEnvironment) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var state EnvironmentData
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -140,7 +132,7 @@ func (r resourceEnvironment) Delete(ctx context.Context, req tfsdk.DeleteResourc
 	}
 
 	// Delete environment by calling API
-	err := r.p.stack.EnvironmentDelete(ctx, state.Name.Value)
+	err := r.p.stack.EnvironmentDelete(ctx, state.Name.ValueString())
 	if err != nil {
 		diags = processRemoteError(err)
 		resp.Diagnostics.Append(diags...)
@@ -151,7 +143,7 @@ func (r resourceEnvironment) Delete(ctx context.Context, req tfsdk.DeleteResourc
 	resp.State.RemoveResource(ctx)
 }
 
-func (r resourceEnvironment) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
+func (r *resourceEnvironment) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	// Get plan values
 	var plan EnvironmentData
 	diags := req.Plan.Get(ctx, &plan)
@@ -169,7 +161,7 @@ func (r resourceEnvironment) Update(ctx context.Context, req tfsdk.UpdateResourc
 	}
 
 	input := NewEnvironmentInput(&plan)
-	environment, err := r.p.stack.EnvironmentUpdate(ctx, state.Name.Value, *input)
+	environment, err := r.p.stack.EnvironmentUpdate(ctx, state.Name.ValueString(), *input)
 	if err != nil {
 		diags = processRemoteError(err)
 		resp.Diagnostics.Append(diags...)
@@ -185,8 +177,8 @@ func (r resourceEnvironment) Update(ctx context.Context, req tfsdk.UpdateResourc
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r resourceEnvironment) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
-	tfsdk.ResourceImportStatePassthroughID(ctx, tftypes.NewAttributePath().WithAttributeName("uid"), req, resp)
+func (r *resourceEnvironment) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("uid"), req, resp)
 }
 
 func NewEnvironmentData(environment *management.Environment) *EnvironmentData {
@@ -195,16 +187,16 @@ func NewEnvironmentData(environment *management.Environment) *EnvironmentData {
 		s := environment.URLs[i]
 
 		url := EnvironmentUrlData{
-			Locale: types.String{Value: s.Locale},
-			URL:    types.String{Value: s.URL},
+			Locale: types.StringValue(s.Locale),
+			URL:    types.StringValue(s.URL),
 		}
 
 		urls = append(urls, url)
 	}
 
 	state := &EnvironmentData{
-		UID:  types.String{Value: environment.UID},
-		Name: types.String{Value: environment.Name},
+		UID:  types.StringValue(environment.UID),
+		Name: types.StringValue(environment.Name),
 		URLs: urls,
 	}
 	return state
@@ -215,15 +207,15 @@ func NewEnvironmentInput(environment *EnvironmentData) *management.EnvironmentIn
 	for i := range environment.URLs {
 		s := environment.URLs[i]
 		url := management.EnvironmentUrl{
-			Locale: s.Locale.Value,
-			URL:    s.URL.Value,
+			Locale: s.Locale.ValueString(),
+			URL:    s.URL.ValueString(),
 		}
 
 		urls = append(urls, url)
 	}
 
 	input := &management.EnvironmentInput{
-		Name: environment.Name.Value,
+		Name: environment.Name.ValueString(),
 		URLs: urls,
 	}
 

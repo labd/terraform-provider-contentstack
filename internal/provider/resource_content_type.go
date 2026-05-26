@@ -6,13 +6,12 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/labd/contentstack-go-sdk/management"
 )
-
-type resourceContentTypeType struct{}
 
 type ContentTypeData struct {
 	UID         types.String `tfsdk:"uid"`
@@ -21,9 +20,18 @@ type ContentTypeData struct {
 	Schema      types.String `tfsdk:"schema"`
 }
 
-// Global Field Resource schema
-func (r resourceContentTypeType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfsdk.Schema{
+type resourceContentType struct {
+	p *contentstackProvider
+}
+
+// Metadata
+func (r *resourceContentType) Metadata(_ context.Context, _ resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = "contentstack_content_type"
+}
+
+// Content Type Resource schema
+func (r *resourceContentType) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
 		Description: `
 		Content type defines the structure or schema of a page or a section of
 		your web or mobile property. To create content for your application, you
@@ -33,41 +41,26 @@ func (r resourceContentTypeType) GetSchema(_ context.Context) (tfsdk.Schema, dia
 		Note: Removing a field or modifying its properties may result in data
 		loss or invalidate field visibility rules.
 		`,
-		Attributes: map[string]tfsdk.Attribute{
-			"uid": {
-				Type:     types.StringType,
+		Attributes: map[string]schema.Attribute{
+			"uid": schema.StringAttribute{
 				Optional: true,
 				Computed: true,
 			},
-			"title": {
-				Type:     types.StringType,
+			"title": schema.StringAttribute{
 				Required: true,
 			},
-			"description": {
-				Type:     types.StringType,
+			"description": schema.StringAttribute{
 				Optional: true,
 			},
-			"schema": {
-				Type:        types.StringType,
+			"schema": schema.StringAttribute{
 				Optional:    true,
 				Description: "The schema as JSON. Use jsonencode(jsonecode(<schema>)) to work around wrong changes.",
 			},
 		},
-	}, nil
+	}
 }
 
-// New resource instance
-func (r resourceContentTypeType) NewResource(_ context.Context, p tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
-	return resourceContentType{
-		p: *(p.(*provider)),
-	}, nil
-}
-
-type resourceContentType struct {
-	p provider
-}
-
-func (r resourceContentType) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
+func (r *resourceContentType) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan ContentTypeData
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -93,7 +86,7 @@ func (r resourceContentType) Create(ctx context.Context, req tfsdk.CreateResourc
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r resourceContentType) Read(ctx context.Context, req tfsdk.ReadResourceRequest, resp *tfsdk.ReadResourceResponse) {
+func (r *resourceContentType) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state ContentTypeData
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -101,12 +94,12 @@ func (r resourceContentType) Read(ctx context.Context, req tfsdk.ReadResourceReq
 		return
 	}
 
-	resource, err := r.p.stack.ContentTypeFetch(ctx, state.UID.Value)
+	resource, err := r.p.stack.ContentTypeFetch(ctx, state.UID.ValueString())
 	if err != nil {
 		if IsNotFoundError(err) {
 			d := diag.NewErrorDiagnostic(
 				"Error retrieving global field",
-				fmt.Sprintf("The global field with UID %s was not found.", state.UID.Value))
+				fmt.Sprintf("The global field with UID %s was not found.", state.UID.ValueString()))
 			resp.Diagnostics.Append(d)
 		} else {
 			diags := processRemoteError(err)
@@ -125,7 +118,7 @@ func (r resourceContentType) Read(ctx context.Context, req tfsdk.ReadResourceReq
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r resourceContentType) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
+func (r *resourceContentType) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var state ContentTypeData
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -134,7 +127,7 @@ func (r resourceContentType) Delete(ctx context.Context, req tfsdk.DeleteResourc
 	}
 
 	// Delete order by calling API
-	err := r.p.stack.ContentTypeDelete(ctx, state.UID.Value)
+	err := r.p.stack.ContentTypeDelete(ctx, state.UID.ValueString())
 	if err != nil {
 		diags = processRemoteError(err)
 		resp.Diagnostics.Append(diags...)
@@ -145,7 +138,7 @@ func (r resourceContentType) Delete(ctx context.Context, req tfsdk.DeleteResourc
 	resp.State.RemoveResource(ctx)
 }
 
-func (r resourceContentType) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
+func (r *resourceContentType) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	// Get plan values
 	var plan ContentTypeData
 	diags := req.Plan.Get(ctx, &plan)
@@ -163,7 +156,7 @@ func (r resourceContentType) Update(ctx context.Context, req tfsdk.UpdateResourc
 	}
 
 	input := NewContentTypeInput(&plan)
-	resource, err := r.p.stack.ContentTypeUpdate(ctx, state.UID.Value, *input)
+	resource, err := r.p.stack.ContentTypeUpdate(ctx, state.UID.ValueString(), *input)
 	if err != nil {
 		diags = processRemoteError(err)
 		resp.Diagnostics.Append(diags...)
@@ -180,8 +173,8 @@ func (r resourceContentType) Update(ctx context.Context, req tfsdk.UpdateResourc
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r resourceContentType) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
-	tfsdk.ResourceImportStatePassthroughID(ctx, tftypes.NewAttributePath().WithAttributeName("uid"), req, resp)
+func (r *resourceContentType) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("uid"), req, resp)
 }
 
 func NewContentTypeData(field *management.ContentType) *ContentTypeData {
@@ -192,10 +185,10 @@ func NewContentTypeData(field *management.ContentType) *ContentTypeData {
 	}
 
 	state := &ContentTypeData{
-		UID:         types.String{Value: field.UID},
-		Title:       types.String{Value: field.Title},
-		Description: types.String{Value: field.Description},
-		Schema:      types.String{Value: string(schemaContent)},
+		UID:         types.StringValue(field.UID),
+		Title:       types.StringValue(field.Title),
+		Description: types.StringValue(field.Description),
+		Schema:      types.StringValue(string(schemaContent)),
 	}
 	return state
 }
@@ -203,10 +196,10 @@ func NewContentTypeData(field *management.ContentType) *ContentTypeData {
 func NewContentTypeInput(field *ContentTypeData) *management.ContentTypeInput {
 
 	input := &management.ContentTypeInput{
-		UID:         &field.UID.Value,
-		Title:       &field.Title.Value,
-		Description: &field.Description.Value,
-		Schema:      json.RawMessage(field.Schema.Value),
+		UID:         field.UID.ValueStringPointer(),
+		Title:       field.Title.ValueStringPointer(),
+		Description: field.Description.ValueStringPointer(),
+		Schema:      json.RawMessage(field.Schema.ValueString()),
 	}
 
 	return input

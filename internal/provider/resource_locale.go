@@ -5,13 +5,12 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-go/tftypes"
 	"github.com/labd/contentstack-go-sdk/management"
 )
-
-type resourceLocaleType struct{}
 
 type LocaleData struct {
 	UID            types.String `tfsdk:"uid"`
@@ -20,48 +19,42 @@ type LocaleData struct {
 	FallbackLocale types.String `tfsdk:"fallback_locale"`
 }
 
+type resourceLocale struct {
+	p *contentstackProvider
+}
+
+// Metadata
+func (r *resourceLocale) Metadata(_ context.Context, _ resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = "contentstack_locale"
+}
+
 // Global Field Resource schema
-func (r resourceLocaleType) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfsdk.Schema{
+func (r *resourceLocale) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
 		Description: `
 		Contentstack offers multilingual support, which allows you to create
 		entries in any language of your choice. When creating entries in other
 		languages, they inherit data initially from the fallback language until
 		they are localized.
 		`,
-		Attributes: map[string]tfsdk.Attribute{
-			"uid": {
-				Type:     types.StringType,
+		Attributes: map[string]schema.Attribute{
+			"uid": schema.StringAttribute{
 				Computed: true,
 			},
-			"name": {
-				Type:     types.StringType,
+			"name": schema.StringAttribute{
 				Required: true,
 			},
-			"code": {
-				Type:     types.StringType,
+			"code": schema.StringAttribute{
 				Optional: true,
 			},
-			"fallback_locale": {
-				Type:     types.StringType,
+			"fallback_locale": schema.StringAttribute{
 				Optional: true,
 			},
 		},
-	}, nil
+	}
 }
 
-// New resource instance
-func (r resourceLocaleType) NewResource(_ context.Context, p tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
-	return resourceLocale{
-		p: *(p.(*provider)),
-	}, nil
-}
-
-type resourceLocale struct {
-	p provider
-}
-
-func (r resourceLocale) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
+func (r *resourceLocale) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan LocaleData
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -89,7 +82,7 @@ func (r resourceLocale) Create(ctx context.Context, req tfsdk.CreateResourceRequ
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r resourceLocale) Read(ctx context.Context, req tfsdk.ReadResourceRequest, resp *tfsdk.ReadResourceResponse) {
+func (r *resourceLocale) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state LocaleData
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -97,12 +90,12 @@ func (r resourceLocale) Read(ctx context.Context, req tfsdk.ReadResourceRequest,
 		return
 	}
 
-	resource, err := r.p.stack.LocaleFetch(ctx, state.Code.Value)
+	resource, err := r.p.stack.LocaleFetch(ctx, state.Code.ValueString())
 	if err != nil {
 		if IsNotFoundError(err) {
 			d := diag.NewErrorDiagnostic(
 				"Error retrieving locale",
-				fmt.Sprintf("The locale %s was not found.", state.Code.Value))
+				fmt.Sprintf("The locale %s was not found.", state.Code.ValueString()))
 			resp.Diagnostics.Append(d)
 		} else {
 			diags := processRemoteError(err)
@@ -121,7 +114,7 @@ func (r resourceLocale) Read(ctx context.Context, req tfsdk.ReadResourceRequest,
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r resourceLocale) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
+func (r *resourceLocale) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var state LocaleData
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -130,7 +123,7 @@ func (r resourceLocale) Delete(ctx context.Context, req tfsdk.DeleteResourceRequ
 	}
 
 	// Delete order by calling API
-	err := r.p.stack.LocaleDelete(ctx, state.Code.Value)
+	err := r.p.stack.LocaleDelete(ctx, state.Code.ValueString())
 	if err != nil {
 		diags = processRemoteError(err)
 		resp.Diagnostics.Append(diags...)
@@ -141,7 +134,7 @@ func (r resourceLocale) Delete(ctx context.Context, req tfsdk.DeleteResourceRequ
 	resp.State.RemoveResource(ctx)
 }
 
-func (r resourceLocale) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
+func (r *resourceLocale) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	// Get plan values
 	var plan LocaleData
 	diags := req.Plan.Get(ctx, &plan)
@@ -159,7 +152,7 @@ func (r resourceLocale) Update(ctx context.Context, req tfsdk.UpdateResourceRequ
 	}
 
 	input := NewLocaleInput(&plan)
-	resource, err := r.p.stack.LocaleUpdate(ctx, state.Code.Value, *input)
+	resource, err := r.p.stack.LocaleUpdate(ctx, state.Code.ValueString(), *input)
 	if err != nil {
 		diags = processRemoteError(err)
 		resp.Diagnostics.Append(diags...)
@@ -178,16 +171,16 @@ func (r resourceLocale) Update(ctx context.Context, req tfsdk.UpdateResourceRequ
 	resp.Diagnostics.Append(diags...)
 }
 
-func (r resourceLocale) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
-	tfsdk.ResourceImportStatePassthroughID(ctx, tftypes.NewAttributePath().WithAttributeName("uid"), req, resp)
+func (r *resourceLocale) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("uid"), req, resp)
 }
 
 func NewLocaleData(field *management.Locale) *LocaleData {
 	state := &LocaleData{
-		UID:            types.String{Value: field.UID},
-		Name:           types.String{Value: field.Name},
-		Code:           types.String{Value: field.Code},
-		FallbackLocale: types.String{Value: field.FallbackLocale},
+		UID:            types.StringValue(field.UID),
+		Name:           types.StringValue(field.Name),
+		Code:           types.StringValue(field.Code),
+		FallbackLocale: types.StringValue(field.FallbackLocale),
 	}
 	return state
 }
@@ -195,9 +188,9 @@ func NewLocaleData(field *management.Locale) *LocaleData {
 func NewLocaleInput(field *LocaleData) *management.LocaleInput {
 
 	input := &management.LocaleInput{
-		Name:           field.Name.Value,
-		Code:           field.Code.Value,
-		FallbackLocale: field.FallbackLocale.Value,
+		Name:           field.Name.ValueString(),
+		Code:           field.Code.ValueString(),
+		FallbackLocale: field.FallbackLocale.ValueString(),
 	}
 
 	return input
@@ -208,11 +201,11 @@ func MergeLocaleResponse(out *LocaleData, in *LocaleData) diag.Diagnostics {
 
 	if in.FallbackLocale != out.FallbackLocale {
 		diags.AddAttributeWarning(
-			tftypes.NewAttributePath().WithAttributeName("fallback_locale"),
+			path.Root("fallback_locale"),
 			"Contentstack modified fallback_locale",
 			fmt.Sprintf(
 				"Contentstack set the fallback_locale to a different value then requested. Requested was %s but value is %s",
-				in.FallbackLocale.Value, out.FallbackLocale.Value))
+				in.FallbackLocale.ValueString(), out.FallbackLocale.ValueString()))
 	}
 	return diags
 }

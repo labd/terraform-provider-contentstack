@@ -4,9 +4,9 @@ page_title: "contentstack_environment Resource - terraform-provider-contentstack
 subcategory: ""
 description: |-
   Contentstack environment are designated destinations to which you can publish
-      your content. Environments are global, meaning they are available across all
-      branches of your stack. An environment can also have a list of URLs to be used
-      as a prefix for published content.
+  	your content. Environments are global, meaning they are available across all
+  	branches of your stack. An environment can also have a list of URLs to be used
+  	as a prefix for published content.
 ---
 
 # contentstack_environment (Resource)
@@ -70,5 +70,3 @@ Required:
 
 - `locale` (String)
 - `url` (String)
-
-
