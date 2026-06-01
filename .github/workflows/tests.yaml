@@ -18,7 +18,7 @@ jobs:
         with:
           go-version-file: 'go.mod'
           cache: true
-      - uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
       - run: go generate ./...
       - name: git diff
         run: |
@@ -40,7 +40,7 @@ jobs:
 
       - name: golangci-lint
         continue-on-error: true
-        uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9.2.0
+        uses: golangci/golangci-lint-action@82606bf257cbaff209d206a39f5134f0cfbfd2ee # v9.2.1
         with:
           args: --issues-exit-code=0 --timeout=5m
 
@@ -48,7 +48,7 @@ jobs:
         run: go test -race -coverprofile=coverage.out -covermode=atomic -coverpkg=./... -v ./...
 
       - name: Upload to codecov
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
+        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
         with:
           verbose: true
 
