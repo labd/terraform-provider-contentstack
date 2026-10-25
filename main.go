@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"log"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 
@@ -34,8 +35,11 @@ func main() {
 	flag.BoolVar(&debugMode, "debug", false, "set to true to run the provider with support for debuggers like delve")
 	flag.Parse()
 
-	providerserver.Serve(context.Background(), provider.New(version), providerserver.ServeOpts{
+	err := providerserver.Serve(context.Background(), provider.New(version), providerserver.ServeOpts{
 		Address: "registry.terraform.io/labd/contentstack",
 		Debug:   debugMode,
 	})
+	if err != nil {
+		log.Fatal(err)
+	}
 }
