@@ -7,7 +7,7 @@ require (
 	github.com/hashicorp/terraform-plugin-docs v0.25.0
 	github.com/hashicorp/terraform-plugin-framework v1.19.0
 	github.com/hashicorp/terraform-plugin-framework-validators v0.19.0
-	github.com/labd/contentstack-go-sdk v0.1.1
+	github.com/labd/contentstack-go-sdk v0.1.2
 	github.com/stretchr/testify v1.10.0
 )
 
