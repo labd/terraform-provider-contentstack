@@ -40,7 +40,7 @@ func TestCopyHttpBasicPasswordsSuccess(t *testing.T) {
 		{TargetURL: "http://example.com", HttpBasicAuth: "auth1"},
 	}
 	data := WebhookDestinationSlice{
-		{TargetURL: types.String{Value: "http://example.com"}, HttpBasicAuth: types.String{Value: "auth1"}, HttpBasicPassword: types.String{Value: "password1"}},
+		{TargetURL: types.StringValue("http://example.com"), HttpBasicAuth: types.StringValue("auth1"), HttpBasicPassword: types.StringValue("password1")},
 	}
 
 	result, err := copyHttpBasicPasswords(wd, data)
