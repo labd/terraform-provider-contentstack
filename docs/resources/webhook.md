@@ -4,7 +4,7 @@ page_title: "contentstack_webhook Resource - terraform-provider-contentstack"
 subcategory: ""
 description: |-
   A webhook is a user-defined HTTP callback. It is a mechanism that sends
-      real-time information to any third-party app or service.
+  	real-time information to any third-party app or service.
 ---
 
 # contentstack_webhook (Resource)
@@ -58,7 +58,6 @@ resource "contentstack_webhook" "mywebhook" {
 
 ### Required
 
-- `destination` (Block List, Min: 1) (see [below for nested schema](#nestedblock--destination))
 - `name` (String)
 - `retry_policy` (String) should be set to `manual`
 
@@ -67,6 +66,7 @@ resource "contentstack_webhook" "mywebhook" {
 - `branches` (List of String)
 - `channels` (List of String)
 - `concise_payload` (Boolean) allows you to send a concise JSON payload to the target URL when a specific event occurs. To send a comprehensive JSON payload, you can set its value to false.
+- `destination` (Block List) (see [below for nested schema](#nestedblock--destination))
 - `disabled` (Boolean) allows you to enable or disable the webhook.
 
 ### Read-Only
@@ -89,9 +89,7 @@ Optional:
 <a id="nestedatt--destination--custom_headers"></a>
 ### Nested Schema for `destination.custom_headers`
 
-Optional:
+Required:
 
 - `header_name` (String)
 - `value` (String)
-
-

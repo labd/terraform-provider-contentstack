@@ -4,9 +4,9 @@ page_title: "contentstack_locale Resource - terraform-provider-contentstack"
 subcategory: ""
 description: |-
   Contentstack offers multilingual support, which allows you to create
-      entries in any language of your choice. When creating entries in other
-      languages, they inherit data initially from the fallback language until
-      they are localized.
+  	entries in any language of your choice. When creating entries in other
+  	languages, they inherit data initially from the fallback language until
+  	they are localized.
 ---
 
 # contentstack_locale (Resource)
@@ -56,5 +56,3 @@ resource "contentstack_locale" "nl" {
 ### Read-Only
 
 - `uid` (String)
-
-
